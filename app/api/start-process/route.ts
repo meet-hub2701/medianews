@@ -19,10 +19,20 @@ export async function POST(req: Request) {
     const gcsUrl = await uploadToGCS(fileUrl, filename)
     console.log(`Uploaded to GCS: ${gcsUrl}`)
 
-    // 2. Extract Text (Mock for now, or use PDF.js if we had it installed)
-    // For this prototype phase, we will just say "The PDF was processed" 
-    // real text extraction is the next "Document AI" step.
-    const rawText = `This is a placeholder for the text extracted from ${filename}. In a real production app, we would use Google Document AI here.`
+    // 2. Extract Text using Google Document AI
+    console.log(`Starting OCR for: ${filename}`)
+    const { extractTextFromPDF } = await import('@/lib/ocr')
+    const bucketName = process.env.GCS_BUCKET_NAME || ''
+    
+    // Fallback to placeholder if credentials are missing locally, but try OCR first
+    let rawText = ''
+    try {
+        rawText = await extractTextFromPDF(bucketName, filename)
+        console.log("OCR Success, text length:", rawText.length)
+    } catch (e: any) {
+        console.error("OCR Failed:", e)
+        rawText = `[OCR Failed] Could not read PDF. Error: ${e.message}`
+    }
 
     // 3. Generate AI Draft
     console.log(`Generating Draft for: ${_id}`)
