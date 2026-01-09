@@ -29,6 +29,7 @@ export async function POST(req: Request) {
     try {
         rawText = await extractTextFromPDF(bucketName, filename)
         console.log("OCR Success, text length:", rawText.length)
+        
     } catch (e: any) {
         console.error("OCR Failed:", e)
         rawText = `[OCR Failed] Could not read PDF. Error: ${e.message}`
