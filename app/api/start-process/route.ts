@@ -14,21 +14,47 @@ export async function POST(req: Request) {
     console.log(`Processing Job: ${_id}`)
 
     // 1. Upload to GCS
+    // We strictly follow the plan: Upload file to Google Cloud Storage.
     const filename = `uploads/${_id}-${Date.now()}.pdf`
     const gcsUrl = await uploadToGCS(fileUrl, filename)
     console.log(`Uploaded to GCS: ${gcsUrl}`)
 
-    // 2. Update Sanity with GCS Link
-    // We add a note to the 'auditLog' or description to prove it happened
+    // 2. Extract Text (Mock for now, or use PDF.js if we had it installed)
+    // For this prototype phase, we will just say "The PDF was processed" 
+    // real text extraction is the next "Document AI" step.
+    const rawText = `This is a placeholder for the text extracted from ${filename}. In a real production app, we would use Google Document AI here.`
+
+    // 3. Generate AI Draft
+    console.log(`Generating Draft for: ${_id}`)
+    const { generateDraft } = await import('@/lib/llm')
+    const aiText = await generateDraft(rawText)
+
+    // 4. Format for Sanity (Simple Block Structure)
+    const blocks = aiText.split('\n\n').filter(p => p.trim()).map(p => ({
+      _type: 'block',
+      _key: Math.random().toString(36).substring(7),
+      children: [{ _type: 'span', _key: Math.random().toString(36).substring(7), text: p }],
+      markDefs: [],
+      style: 'normal'
+    }))
+
+    // 5. Update Sanity
     await client.patch(_id).set({
-      description: `Archived to GCS: ${gcsUrl}`, 
-      // In a real high-volume app, we might trigger a Cloud Function here.
-      // For now, we just mark it as "Processed by Next.js"
+      description: `Archived to GCS: ${gcsUrl}`,
+      aiContent: blocks,
+      status: 'needs_review'
     }).commit()
 
-    return NextResponse.json({ success: true, gcsUrl })
+    console.log(`Sanity Updated: ${_id}`)
+
+    return NextResponse.json({ success: true, gcsUrl, aiText })
   } catch (error: any) {
     console.error('Processing Error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
+}
+
+// Allow browser testing (GET Request)
+export async function GET() {
+  return NextResponse.json({ status: 'API Online', message: 'Send a POST request to this endpoint.' })
 }
