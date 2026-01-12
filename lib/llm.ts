@@ -2,13 +2,8 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 
 // Initialize Gemini with API Key
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
-const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+const model = genAI.getGenerativeModel({ model: 'gemini-pro' })
 
-/**
- * Generates a news draft from the extracted text using Gemini.
- * @param text The raw text extracted from the PDF
- * @returns The AI-generated article text
- */
 export async function generateDraft(text: string): Promise<string> {
   if (!process.env.GEMINI_API_KEY) {
     console.warn("GEMINI_API_KEY is missing. Returning mock response.")

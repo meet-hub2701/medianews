@@ -58,6 +58,15 @@ export async function POST(req: Request) {
 
     console.log(`Sanity Updated: ${_id}`)
 
+    // 6. Send Slack Notification
+    try {
+        const { sendSlackNotification } = await import('@/lib/notifications')
+        const message = `🚨 *New Article Ready for Review* 🚨\n\n📄 *File:* ${filename}\n🤖 *Status:* AI Draft Generated\n🔗 *Edit in Studio:* <http://localhost:3000/studio/structure/newsItem;${_id}|Open Editor>`
+        await sendSlackNotification(message)
+    } catch (notifyErr) {
+        console.error("Notification failed:", notifyErr)
+    }
+
     return NextResponse.json({ success: true, gcsUrl, aiText })
   } catch (error: any) {
     console.error('Processing Error:', error)

@@ -58,6 +58,59 @@ export default defineType({
       description: 'The AI-rewritten version of the press release.',
     }),
     defineField({
+      name: 'author', // Renamed from uploadedBy to be more specific if manual
+      title: 'Author / Editor',
+      type: 'string',
+    }),
+    defineField({
+      name: 'source',
+      title: 'Submission Source',
+      type: 'string',
+      options: {
+        list: [
+          {title: 'Zapier Automation', value: 'zapier'},
+          {title: 'Manual Upload', value: 'manual'},
+          {title: 'API', value: 'api'},
+        ],
+      },
+      initialValue: 'zapier',
+      readOnly: true,
+    }),
+     defineField({
+      name: 'assets',
+      title: 'Supplementary Assets',
+      type: 'array',
+      of: [{type: 'file'}, {type: 'image'}],
+      description: 'Images or extra docs related to this story.'
+    }),
+    defineField({
+      name: 'comments',
+      title: 'Editorial Comments',
+      type: 'array',
+      of: [{
+        type: 'object',
+        fields: [
+          {name: 'author', type: 'string', title: 'Author'},
+          {name: 'message', type: 'text', title: 'Message'},
+          {name: 'postedAt', type: 'datetime', title: 'Posted At', initialValue: () => new Date().toISOString()}
+        ]
+      }]
+    }),
+    defineField({
+      name: 'history',
+      title: 'Workflow History',
+      type: 'array',
+      of: [{
+        type: 'object',
+        fields: [
+            {name: 'action', type: 'string', title: 'Action'},
+            {name: 'by', type: 'string', title: 'By User'},
+            {name: 'timestamp', type: 'datetime', title: 'Timestamp'}
+        ]
+      }],
+      readOnly: true
+    }),
+    defineField({
       name: 'publishedAt',
       title: 'Published At',
       type: 'datetime',
