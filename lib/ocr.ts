@@ -1,4 +1,14 @@
 import { DocumentProcessorServiceClient } from '@google-cloud/documentai';
+import mammoth from 'mammoth';
+import { Storage } from '@google-cloud/storage';
+
+const storage = new Storage({
+  projectId: process.env.GCP_PROJECT_ID,
+  credentials: {
+      client_email: process.env.GCP_CLIENT_EMAIL,
+      private_key: process.env.GCP_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+  },
+})
 
 // Initialize Client
 const client = new DocumentProcessorServiceClient({
@@ -9,29 +19,38 @@ const client = new DocumentProcessorServiceClient({
   projectId: process.env.GCP_PROJECT_ID,
 });
 
-/**
- * Extracts text from a PDF stored in Google Cloud Storage.
- * @param bucketName The GCS bucket name
- * @param fileName The path to the file in the bucket
- * @returns The extracted text
- */
-export async function extractTextFromPDF(bucketName: string, fileName: string): Promise<string> {
+export async function extractTextFromDocument(bucketName: string, fileName: string, contentType: string): Promise<string> {
+  
+  // 1. Handle DOCX using Mammoth (Free, Local)
+  if (contentType.includes('word') || contentType.includes('docx')) {
+      console.log(`Processing DOCX with Mammoth: ${fileName}`);
+      try {
+          const bucket = storage.bucket(bucketName);
+          const file = bucket.file(fileName);
+          const [fileBuffer] = await file.download();
+          const result = await mammoth.extractRawText({ buffer: fileBuffer });
+          return result.value || "";
+      } catch (err) {
+          console.error("Mammoth Extraction Failed:", err);
+          throw new Error("Failed to extract text from DOCX");
+      }
+  }
+
+  // 2. Handle PDF using Google Document AI (Paid)
   const processorId = process.env.DOCAI_PROCESSOR_ID;
-  const location = 'us'; // Or 'eu', must match where you created the processor
+  const location = 'us'; 
   const projectId = process.env.GCP_PROJECT_ID;
 
   if (!processorId) throw new Error("Missing DOCAI_PROCESSOR_ID in environment variables");
 
   const name = `projects/${projectId}/locations/${location}/processors/${processorId}`;
-
-  // The specific file in GCS
   const gcsUri = `gs://${bucketName}/${fileName}`;
 
   const request = {
     name,
     gcsDocument: {
       gcsUri,
-      mimeType: 'application/pdf',
+      mimeType: 'application/pdf', // Force PDF for DocAI
     },
   };
 

@@ -5,7 +5,25 @@ import { client } from '@/lib/sanity'
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { _id, fileUrl } = body
+    let { _id, fileUrl } = body
+
+    // Handle Manual Trigger from Studio (Look up the file URL)
+    if (fileUrl === 'LOOKUP_IN_SANITY') {
+        console.log("Manual Trigger detected. Fetching file URL from Sanity...")
+        const doc = await client.fetch(`*[_id == $_id][0]{ 'url': originalDoc.asset->url }`, { _id })
+        
+        if (!doc || !doc.url) {
+            return NextResponse.json({ error: 'No file found in Sanity document' }, { status: 400 })
+        }
+        fileUrl = doc.url
+        console.log(`Resolved File URL: ${fileUrl}`)
+        
+        // Update Source field to 'manual' if not set
+        await client.patch(_id).setIfMissing({ source: 'manual' }).commit()
+    } else {
+         // Default to Zapier source
+         await client.patch(_id).setIfMissing({ source: 'zapier' }).commit()
+    }
 
     if (!_id || !fileUrl) {
       return NextResponse.json({ error: 'Missing _id or fileUrl' }, { status: 400 })
@@ -14,25 +32,27 @@ export async function POST(req: Request) {
     console.log(`Processing Job: ${_id}`)
 
     // 1. Upload to GCS
-    // We strictly follow the plan: Upload file to Google Cloud Storage.
     const filename = `uploads/${_id}-${Date.now()}.pdf`
     const gcsUrl = await uploadToGCS(fileUrl, filename)
     console.log(`Uploaded to GCS: ${gcsUrl}`)
 
-    // 2. Extract Text using Google Document AI
-    console.log(`Starting OCR for: ${filename}`)
-    const { extractTextFromPDF } = await import('@/lib/ocr')
+    // 2. Extract Text (PDF or DOCX)
+    console.log(`Starting Text Extraction for: ${filename}`)
+    const { extractTextFromDocument } = await import('@/lib/ocr')
     const bucketName = process.env.GCS_BUCKET_NAME || ''
     
-    // Fallback to placeholder if credentials are missing locally, but try OCR first
+    // Determine Content Type from extension
+    const isWord = filename.toLowerCase().endsWith('.doc') || filename.toLowerCase().endsWith('.docx')
+    const contentType = isWord ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'application/pdf'
+
     let rawText = ''
     try {
-        rawText = await extractTextFromPDF(bucketName, filename)
-        console.log("OCR Success, text length:", rawText.length)
+        rawText = await extractTextFromDocument(bucketName, filename, contentType)
+        console.log("Extraction Success, text length:", rawText.length)
         
     } catch (e: any) {
-        console.error("OCR Failed:", e)
-        rawText = `[OCR Failed] Could not read PDF. Error: ${e.message}`
+        console.error("Extraction Failed:", e)
+        rawText = `[Extraction Failed] Could not read document. Error: ${e.message}`
     }
 
     // 3. Generate AI Draft
@@ -90,7 +110,6 @@ export async function POST(req: Request) {
   }
 }
 
-// Allow browser testing (GET Request)
 export async function GET() {
   return NextResponse.json({ status: 'API Online', message: 'Send a POST request to this endpoint.' })
 }

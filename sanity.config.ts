@@ -13,10 +13,21 @@ import schemaNewsItem from './sanity/schema_newsItem'
 // Go to https://www.sanity.io/docs/api-versioning to learn how API versioning works
 import {apiVersion, dataset, projectId} from './sanity/env'
 
+import {GenerateAction} from './sanity/GenerateAction'
+
 export default defineConfig({
   basePath: '/studio',
   projectId,
   dataset,
+  
+  document: {
+    actions: (prev, context) => {
+      return context.schemaType === 'newsItem' 
+        ? [...prev, GenerateAction] 
+        : prev
+      }
+  },
+
   // Add and edit the content schema in the './sanity/schema' folder
   schema: {
     types: [schemaNewsItem],
