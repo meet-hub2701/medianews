@@ -58,11 +58,27 @@ export async function POST(req: Request) {
 
     console.log(`Sanity Updated: ${_id}`)
 
-    // 6. Send Slack Notification
+    // 6. Send Notifications (Slack & Email)
     try {
-        const { sendSlackNotification } = await import('@/lib/notifications')
-        const message = `🚨 *New Article Ready for Review* 🚨\n\n📄 *File:* ${filename}\n🤖 *Status:* AI Draft Generated\n🔗 *Edit in Studio:* <http://localhost:3000/studio/structure/newsItem;${_id}|Open Editor>`
-        await sendSlackNotification(message)
+        const { sendSlackNotification, sendEmailNotification } = await import('@/lib/notifications')
+        
+        // Slack
+        const slackMessage = `🚨 *New Article Ready for Review* 🚨\n\n📄 *File:* ${filename}\n🤖 *Status:* AI Draft Generated\n🔗 *Edit in Studio:* <http://localhost:3000/studio/structure/newsItem;${_id}|Open Editor>`
+        await sendSlackNotification(slackMessage)
+
+        // Email
+        const editorEmail = process.env.EDITOR_EMAIL
+        if (editorEmail) {
+          const emailSubject = `[Action Required] New Draft by AI: ${filename}`
+          const emailHtml = `
+            <h2>New Article Ready for Review</h2>
+            <p><strong>File:</strong> ${filename}</p>
+            <p><strong>Status:</strong> AI Draft Generated</p>
+            <br/>
+            <a href="http://localhost:3000/studio/structure/newsItem;${_id}" style="padding: 10px 20px; background-color: #228b22; color: white; text-decoration: none; border-radius: 5px;">Open Editor</a>
+          `
+          await sendEmailNotification(editorEmail, emailSubject, emailHtml)
+        }
     } catch (notifyErr) {
         console.error("Notification failed:", notifyErr)
     }
