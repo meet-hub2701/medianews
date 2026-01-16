@@ -1,36 +1,81 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Agent Backend Next (HITL News Workflow)
 
-## Getting Started
+This project is a Next.js application that serves as the backend orchestrator and CMS for the HITL (Human-in-the-Loop) News Workflow. It integrates Google Cloud services and AI to automate press release processing while triggering editorial review in Sanity Studio.
 
-First, run the development server:
+## Architecture
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+*   **Framework:** Next.js (App Router)
+*   **CMS:** Sanity.io (Embedded Studio)
+*   **Storage:** Google Cloud Storage (GCS)
+*   **OCR/Parsing:**
+    *   **PDF:** Google Document AI
+    *   **Word:** Mammoth (Node.js)
+*   **AI Engine:** Google Gemini Pro (`google-generative-ai`)
+*   **Notifications:** Slack (Webhook) & Email (Nodemailer)
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Features
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1.  **Automatic Flow (Zapier):** Receives file URLs via Webhook, uploads to GCS, parses, rewrites, and posts to Sanity.
+2.  **Manual Flow (Studio):** "Generate AI Draft" button in Sanity Studio triggers the same pipeline for manually uploaded files.
+3.  **Review Interface:** Split-pane view to compare Original PDF/Doc vs AI Draft.
+4.  **Notifications:** Real-time alerts to Slack and Email when a draft is ready.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Setup & Installation
 
-## Learn More
+1.  **Clone & Install:**
+    ```bash
+    git clone <repo-url>
+    cd agent-backend-next
+    npm install
+    ```
 
-To learn more about Next.js, take a look at the following resources:
+2.  **Environment Variables:**
+    Create a `.env.local` file with the following keys:
+    ```env
+    # Sanity
+    NEXT_PUBLIC_SANITY_PROJECT_ID=your_id
+    NEXT_PUBLIC_SANITY_DATASET=production
+    SANITY_API_TOKEN=your_token
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+    # Google Cloud (Storage & DocAI)
+    GCP_PROJECT_ID=your_gcp_project
+    GCP_CLIENT_EMAIL=your_service_account_email
+    GCP_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n..."
+    GCS_BUCKET_NAME=your_bucket_name
+    DOCAI_PROCESSOR_ID=your_processor_id
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+    # Gemini AI
+    GEMINI_API_KEY=your_gemini_key
 
-## Deploy on Vercel
+    # Notifications
+    SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...
+    SMTP_HOST=smtp.gmail.com
+    SMTP_USER=your_email
+    SMTP_PASS=your_app_password
+    EDITOR_EMAIL=recipient@example.com
+    ```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+3.  **Run Development Server:**
+    ```bash
+    npm run dev
+    ```
+    Access the Studio at [http://localhost:3000/studio](http://localhost:3000/studio).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Key Modules
+
+*   **`app/api/start-process/route.ts`**: The main entry point. Orchestrates the pipeline (Upload -> OCR -> AI -> Sanity).
+*   **`lib/ocr.ts`**: Handles text extraction. Automatically routes `.pdf` to Document AI and `.docx` to Mammoth.
+*   **`lib/llm.ts`**: Prompts Gemini Pro to rewrite the text into a news article.
+*   **`lib/notifications.ts`**: Handles sending alerts.
+*   **`sanity/GenerateAction.tsx`**: Custom Document Action that adds the "Generate" button to the Studio.
+
+## Deployment
+
+This app is optimized for Vercel.
+1.  Push to GitHub.
+2.  Import project in Vercel.
+3.  Add all Environment Variables in Vercel Dashboard.
+4.  Deploy.
+
+---
+*Created for Issue #2524 - HITL News Workflow*

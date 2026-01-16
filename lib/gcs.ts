@@ -13,10 +13,6 @@ const storage = new Storage({
 
 const bucketName = process.env.GCS_BUCKET_NAME || 'sanity-agent-uploads'
 
-/**
- * Uploads a file from a URL to Google Cloud Storage
- * @returns The public URL of the uploaded file
- */
 export async function uploadToGCS(fileUrl: string, filename: string): Promise<string> {
   if (!bucketName) throw new Error("GCS_BUCKET_NAME is missing")
 
@@ -41,8 +37,6 @@ export async function uploadToGCS(fileUrl: string, filename: string): Promise<st
       }))
       .on('error', (err) => reject(err))
       .on('finish', async () => {
-        // Make simple public URL (assuming bucket is public or signed URL required)
-        // For now, we return the gs util URI or public link
         const publicUrl = `https://storage.googleapis.com/${bucketName}/${filename}`
         resolve(publicUrl)
       })

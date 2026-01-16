@@ -20,7 +20,7 @@ const client = new DocumentProcessorServiceClient({
 });
 
 export async function extractTextFromDocument(bucketName: string, fileName: string, contentType: string): Promise<string> {
-  
+
   // 1. Handle DOCX using Mammoth (Free, Local)
   if (contentType.includes('word') || contentType.includes('docx')) {
       console.log(`Processing DOCX with Mammoth: ${fileName}`);

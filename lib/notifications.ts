@@ -1,11 +1,5 @@
 import nodemailer from 'nodemailer';
 
-/**
- * Sends an email notification using SMTP (e.g., Gmail, SendGrid).
- * @param to Recipient email
- * @param subject Email subject
- * @param html Email body (HTML)
- */
 export async function sendEmailNotification(to: string, subject: string, html: string) {
   const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM } = process.env;
 
@@ -37,11 +31,6 @@ export async function sendEmailNotification(to: string, subject: string, html: s
   }
 }
 
-/**
- * Sends a notification to a Slack Channel using an Incoming Webhook.
- * @param message The text to display in Slack
- * @param blocks Optional Slack Block Kit blocks for rich formatting
- */
 export async function sendSlackNotification(message: string, blocks?: any[]) {
   const webhookUrl = process.env.SLACK_WEBHOOK_URL;
 
