@@ -20,15 +20,15 @@ export async function POST(req: Request) {
     console.log(`Zendesk Ticket Received: #${ticket.id} - ${ticket.subject}`)
 
     // 0. Deduplication Check (Idempotency)
-    const existing = await client.fetch(`*[_type == "newsItem" && description == $desc][0]._id`, {
-        desc: `Imported from Zendesk Ticket #${ticket.id}`
-    })
+    // const existing = await client.fetch(`*[_type == "newsItem" && description == $desc][0]._id`, {
+    //     desc: `Imported from Zendesk Ticket #${ticket.id}`
+    // })
 
-    if (existing) {
-        console.log(`Duplicate Webhook for Ticket #${ticket.id}. Already processed as ${existing}. Skipping.`)
-        // IMPORTANT: Return success to stop Zendesk from retrying
-        return NextResponse.json({ success: true, docId: existing, message: 'Already processed' })
-    }
+    // if (existing) {
+    //     console.log(`Duplicate Webhook for Ticket #${ticket.id}. Already processed as ${existing}. Skipping.`)
+    //     // IMPORTANT: Return success to stop Zendesk from retrying
+    //     return NextResponse.json({ success: true, docId: existing, message: 'Already processed' })
+    // }
 
     let rawText = ''
     let gcsUrl = ''
