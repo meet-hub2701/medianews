@@ -6,22 +6,25 @@ export async function POST(req: Request) {
   try {
     const body = await req.json()
     let { _id, fileUrl } = body
+    let originalFilename = ''
 
     // Handle Manual Trigger from Studio (Look up the file URL)
     if (fileUrl === 'LOOKUP_IN_SANITY') {
         console.log("Manual Trigger detected. Fetching file URL from Sanity...")
-        const doc = await client.fetch(`*[_id == $_id][0]{ 'url': originalDoc.asset->url }`, { _id })
+        const doc = await client.fetch(`*[_id == $_id][0]{ 
+          'url': originalDoc.asset->url, 
+          'filename': originalDoc.asset->originalFilename 
+        }`, { _id })
         
         if (!doc || !doc.url) {
             return NextResponse.json({ error: 'No file found in Sanity document' }, { status: 400 })
         }
         fileUrl = doc.url
-        console.log(`Resolved File URL: ${fileUrl}`)
+        originalFilename = doc.filename || ''
+        console.log(`Resolved File from Sanity: ${fileUrl} (${originalFilename})`)
         
-        // Update Source field to 'manual' if not set
         await client.patch(_id).setIfMissing({ source: 'manual' }).commit()
     } else {
-         // Default to Zapier source
          await client.patch(_id).setIfMissing({ source: 'zapier' }).commit()
     }
 
@@ -32,7 +35,17 @@ export async function POST(req: Request) {
     console.log(`Processing Job: ${_id}`)
 
     // 1. Upload to GCS
-    const filename = `uploads/${_id}-${Date.now()}.pdf`
+    // Determine extension
+    let extension = 'pdf' // default
+    if (originalFilename) {
+        extension = originalFilename.split('.').pop()?.toLowerCase() || 'pdf'
+    } else if (fileUrl.toLowerCase().includes('.docx')) {
+        extension = 'docx'
+    } else if (fileUrl.toLowerCase().includes('.doc')) {
+        extension = 'doc'
+    }
+
+    const filename = `uploads/${_id}-${Date.now()}.${extension}`
     const gcsUrl = await uploadToGCS(fileUrl, filename)
     console.log(`Uploaded to GCS: ${gcsUrl}`)
 
