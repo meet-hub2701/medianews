@@ -15,6 +15,15 @@ export async function POST(req: Request) {
 
     console.log(`Zendesk Ticket Received: #${ticket.id} - ${ticket.subject}`)
 
+    const existing = await client.fetch(`*[_type == "newsItem" && description == $desc][0]._id`, {
+        desc: `Imported from Zendesk Ticket #${ticket.id}`
+    })
+
+    if (existing) {
+        console.log(`Duplicate Webhook for Ticket #${ticket.id}. Already processed as ${existing}. Skipping.`)
+        return NextResponse.json({ success: true, docId: existing, message: 'Already processed' })
+    }
+
     // 1. Generate AI Draft from Description (No OCR needed as it's already text)
     console.log(`Generating AI Draft for Ticket #${ticket.id}`)
     const aiText = await generateDraft(ticket.description)
